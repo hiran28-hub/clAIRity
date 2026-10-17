@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>clAIRity - Air Quality Forecast</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <div id="deployment-0147114e-ac9b-4cff-94f7-96cd30e9c6f6"></div>
+    <script src="https://studio.pickaxe.co/api/embed/bundle.js" defer></script>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyCezkJ4CLvDl7AAgvqXBowo8ldXVUsvWyg",
+            authDomain: "clairity-app.firebaseapp.com",
+            projectId: "clairity-app",
+            storageBucket: "clairity-app.firebasestorage.app",
+            messagingSenderId: "661832204956",
+            appId: "1:661832204956:web:5993ad9e3de77904c96359",
+            measurementId: "G-WG8WRBK0Z2"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        const auth = getAuth();
+        const analytics = getAnalytics(app);
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .aqi-circle {
+            background: conic-gradient(from 0deg, #10b981 0deg 72deg, #f59e0b 72deg 144deg, #ef4444 144deg 216deg, #8b5cf6 216deg 288deg, #dc2626 288deg 360deg);
+            padding: 6px;
+            border-radius: 50%;
+        }
+
+        .aqi-inner {
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-container {
+            background: linear-gradient(135deg, #e0f2fe 0%, #e8f5e8 100%);
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .map-pin {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .map-pin:hover {
+            transform: scale(1.3);
+            z-index: 10;
+        }
+
+        .notification-popup {
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .health-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+        }
+
+        .nav-active {
+            color: #2563eb !important;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 4px;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-blue-50 via-white to-green-50 min-h-screen">
+    <!-- Header Navigation -->
+    <header class="bg-white/80 backdrop-blur-md shadow-sm border-b border-blue-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <img src="c:\Users\DELL\Downloads\clairity_logo.png" alt="clAIRity Logo" class="h-10 w-auto">
+                    <span
+                        class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">clAIRity</span>
+                </div>
+
+                <!-- Navigation -->
+                <nav class="hidden md:flex space-x-8">
+                    <button onclick="showPage('dashboard')"
+                        class="nav-btn nav-active font-medium transition-all duration-200">Dashboard</button>
+                    <button onclick="showPage('compare')"
+                        class="nav-btn text-gray-600 hover:text-blue-600 font-medium transition-all duration-200">Compare
+                        Localities</button>
+                    <button onclick="showPage('health')"
+                        class="nav-btn text-gray-600 hover:text-blue-600 font-medium transition-all duration-200">Health
+                        Hub</button>
+                    <button onclick="showPage('forum')"
+                        class="nav-btn text-gray-600 hover:text-blue-600 font-medium transition-all duration-200">Community</button>
+                </nav>
+
+                <!-- Alert Button -->
+                <button onclick="showAlert()"
+                    class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-5 py-2.5 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium shadow-lg">
+                    🔔 Alerts
+                </button>
+            </div>
+        </div>
+    </header>
+    <!-- Login Page -->
+    <div id="login"
+        class="page hidden min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold text-gray-800 text-center mb-6">Welcome Back</h2>
+
+            <!-- Tabs -->
+            <div class="flex mb-6 border-b border-gray-200">
+                <button id="signInTab" onclick="showLoginTab('signIn')"
+                    class="flex-1 text-center py-2 font-medium border-b-2 border-blue-500 text-blue-600">Sign
+                    In</button>
+                <button id="signUpTab" onclick="showLoginTab('signUp')"
+                    class="flex-1 text-center py-2 font-medium border-b-2 border-transparent hover:text-blue-600">Sign
+                    Up</button>
+            </div>
+
+            <!-- Sign In Form -->
+            <div id="signInForm">
+                <input type="email" placeholder="Email"
+                    class="w-full mb-4 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="password" placeholder="Password"
+                    class="w-full mb-4 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <button
+                    class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all font-medium">Sign
+                    In</button>
+            </div>
+
+            <!-- Sign Up Form -->
+            <div id="signUpForm" class="hidden">
+                <input type="text" placeholder="Full Name"
+                    class="w-full mb-4 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="email" placeholder="Email"
+                    class="w-full mb-4 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="password" placeholder="Password"
+                    class="w-full mb-4 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="password" placeholder="Confirm Password"
+                    class="w-full mb-4 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <button
+                    class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl hover:from-green-600 hover:to-green-700 transition-all font-medium">Sign
+                    Up</button>
+            </div>
+
+            <div class="text-center text-sm text-gray-500 mt-4">
+                By continuing, you agree to our Terms and Privacy Policy.
+            </div>
+        </div>
+    </div>
+    <script>
+        function showLoginTab(tab) {
+            const signInForm = document.getElementById('signInForm');
+            const signUpForm = document.getElementById('signUpForm');
+            const signInTab = document.getElementById('signInTab');
+            const signUpTab = document.getElementById('signUpTab');
+
+            if (tab === 'signIn') {
+                signInForm.classList.remove('hidden');
+                signUpForm.classList.add('hidden');
+                signInTab.classList.add('border-blue-500', 'text-blue-600');
+                signInTab.classList.remove('border-transparent', 'hover:text-blue-600');
+                signUpTab.classList.remove('border-blue-500', 'text-blue-600');
+                signUpTab.classList.add('border-transparent', 'hover:text-blue-600');
+            } else {
+                signInForm.classList.add('hidden');
+                signUpForm.classList.remove('hidden');
+                signUpTab.classList.add('border-blue-500', 'text-blue-600');
+                signUpTab.classList.remove('border-transparent', 'hover:text-blue-600');
+                signInTab.classList.remove('border-blue-500', 'text-blue-600');
+                signInTab.classList.add('border-transparent', 'hover:text-blue-600');
+            }
+        }
+    </script>
+
+    <button onclick="showPage('login')"
+        class="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-green-500 hover:from-green-500 hover:to-blue-600 text-white px-5 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-medium text-sm">
+        <span class="text-xl">👤</span>
+        <span>Login</span>
+    </button>
+
+
+    <!-- Dashboard Page -->
+    <div id="dashboard" class="page">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Hero Section with AQI -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-bold text-gray-800 mb-3">Air Quality in Hyderabad</h1>
+                <p class="text-xl text-gray-600 mb-10">Real-time monitoring for healthier living</p>
+
+                <!-- Large AQI Circle -->
+                <div class="flex justify-center mb-8">
+                    <div class="aqi-circle w-56 h-56 shadow-2xl">
+                        <div class="aqi-inner">
+                            <div class="text-5xl font-bold text-green-600 mb-1">42</div>
+                            <div class="text-xl font-semibold text-gray-700 mb-1">Good</div>
+                            <div class="text-sm text-gray-500 uppercase tracking-wide">AQI</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="max-w-2xl mx-auto">
+                    <p class="text-lg text-gray-700 leading-relaxed">
+                        Air quality is satisfactory and poses little or no risk to health. Perfect conditions for
+                        outdoor activities.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Interactive Real-Time Map Section -->
+            <div class="bg-white rounded-3xl shadow-xl p-8 mb-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <span class="mr-3">🗺️</span>
+                        Real-Time Air Quality Map
+                    </h2>
+                    <div class="flex items-center space-x-2 text-sm text-gray-600">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span>Live Data</span>
+                    </div>
+                </div>
+
+                <!-- Map Container -->
+                <div id="realTimeMap" class="h-96 rounded-2xl overflow-hidden shadow-inner border border-gray-200">
+                </div>
+
+                <!-- Map Controls -->
+                <div class="flex justify-between items-center mt-4">
+                    <div class="flex space-x-2">
+                        <button onclick="toggleMapLayer('satellite')"
+                            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">
+                            Satellite
+                        </button>
+                        <button onclick="toggleMapLayer('street')"
+                            class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
+                            Street
+                        </button>
+                    </div>
+
+                    <!-- Legend -->
+                    <div class="flex items-center space-x-4 text-sm">
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+                            <span>Good (0-50)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-yellow-500 rounded-full mr-2"></div>
+                            <span>Moderate (51-100)</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-4 h-4 bg-orange-500 rounded-full mr-2"></div>
+                            <span>Unhealthy (101+)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 24-Hour Forecast Chart -->
+            <div class="bg-white rounded-3xl shadow-xl p-8 mb-10">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <span class="mr-3">📊</span>
+                    24-Hour Forecast
+                </h2>
+                <div class="h-64">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Health Tips Section -->
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-8 text-center">Today's Health Tips</h2>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Tip 1 -->
+                    <div
+                        class="health-card rounded-3xl shadow-lg p-8 border-l-4 border-green-500 hover:shadow-xl transition-shadow duration-300">
+                        <div class="flex items-center mb-6">
+                            <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mr-4">
+                                <span class="text-3xl">🚶‍♀️</span>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800">Good day for a walk!</h3>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed">Perfect air quality today! Great time for outdoor
+                            exercise, jogging, or taking the kids to the park.</p>
+                    </div>
+
+                    <!-- Tip 2 -->
+                    <div
+                        class="health-card rounded-3xl shadow-lg p-8 border-l-4 border-blue-500 hover:shadow-xl transition-shadow duration-300">
+                        <div class="flex items-center mb-6">
+                            <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mr-4">
+                                <span class="text-3xl">🪟</span>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800">Keep windows open</h3>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed">Fresh air is flowing! Open your windows to let natural
+                            ventilation improve your indoor air quality.</p>
+                    </div>
+
+                    <!-- Tip 3 -->
+                    <div
+                        class="health-card rounded-3xl shadow-lg p-8 border-l-4 border-green-500 hover:shadow-xl transition-shadow duration-300">
+                        <div class="flex items-center mb-6">
+                            <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mr-4">
+                                <span class="text-3xl">🏃‍♂️</span>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800">Best time for exercise is before 10 AM</h3>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed">Morning air is cleanest! Schedule your workout early
+                            for the best air quality conditions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compare Localities Page -->
+    <div id="compare" class="page hidden">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl font-bold text-gray-800 mb-3">Compare Localities</h1>
+                <p class="text-xl text-gray-600">Live air quality comparison across Localities</p>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl p-8">
+                <div class="h-80 mb-8">
+                    <canvas id="compareChart"></canvas>
+                </div>
+
+                <!-- City Cards -->
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div
+                        class="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Uppal</h3>
+                        <div class="text-4xl font-bold text-green-600 mb-2">42</div>
+                        <div class="text-green-700 font-semibold text-lg">Good</div>
+                        <div class="text-sm text-gray-600 mt-2">Safe for all activities</div>
+                    </div>
+
+                    <div
+                        class="text-center p-6 bg-gradient-to-br from-red-50 to-red-100 rounded-2xl border border-red-200">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Nacharam</h3>
+                        <div class="text-4xl font-bold text-red-600 mb-2">150</div>
+                        <div class="text-red-700 font-semibold text-lg">Unhealthy</div>
+                        <div class="text-sm text-gray-600 mt-2">Limit outdoor exposure</div>
+                    </div>
+
+                    <div
+                        class="text-center p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl border border-yellow-200">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">Ameerpet</h3>
+                        <div class="text-4xl font-bold text-yellow-600 mb-2">88</div>
+                        <div class="text-yellow-700 font-semibold text-lg">Moderate</div>
+                        <div class="text-sm text-gray-600 mt-2">Acceptable for most people</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Health Hub Page -->
+    <div id="health" class="page hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl font-bold text-gray-800 mb-3">My Health Hub</h1>
+                <p class="text-xl text-gray-600">Track how air quality impacts your daily wellness</p>
+            </div>
+
+            <!-- Health Device Integration -->
+            <div class="bg-white rounded-3xl shadow-xl p-8 mb-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                        <span class="mr-3">⌚</span>
+                        Connected Devices
+                    </h2>
+                    <button onclick="connectDevice()"
+                        class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2.5 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium shadow-lg">
+                        + Connect Device
+                    </button>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                    <!-- Apple Watch -->
+                    <div
+                        class="flex items-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl border border-gray-200">
+                        <div class="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mr-4">
+                            <span class="text-white text-2xl">⌚</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">Apple Watch</h3>
+                            <div class="text-green-600 text-sm font-medium flex items-center">
+                                <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                Connected
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Last sync: 2 min ago</div>
+                        </div>
+                    </div>
+
+                    <!-- Fitbit -->
+                    <div
+                        class="flex items-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200">
+                        <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mr-4">
+                            <span class="text-white text-2xl">📱</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">Fitbit Versa</h3>
+                            <div class="text-green-600 text-sm font-medium flex items-center">
+                                <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                Connected
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Last sync: 5 min ago</div>
+                        </div>
+                    </div>
+
+                    <!-- Health App -->
+                    <div
+                        class="flex items-center p-6 bg-gradient-to-br from-red-50 to-red-100 rounded-2xl border border-red-200">
+                        <div class="w-16 h-16 bg-red-500 rounded-2xl flex items-center justify-center mr-4">
+                            <span class="text-white text-2xl">❤️</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800 text-lg">Health App</h3>
+                            <div class="text-green-600 text-sm font-medium flex items-center">
+                                <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                                Syncing
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Last sync: 1 min ago</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Health Metrics -->
+            <div class="grid lg:grid-cols-4 gap-6 mb-10">
+                <!-- Heart Rate -->
+                <div class="bg-white rounded-3xl shadow-xl p-6 border-l-4 border-red-500">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Heart Rate</h3>
+                        <span class="text-2xl">❤️</span>
+                    </div>
+                    <div class="text-3xl font-bold text-red-600 mb-2">72 BPM</div>
+                    <div class="text-sm text-gray-600">Resting: 68 BPM</div>
+                    <div class="text-xs text-green-600 mt-2">↓ 3% vs yesterday</div>
+                </div>
+
+                <!-- Steps -->
+                <div class="bg-white rounded-3xl shadow-xl p-6 border-l-4 border-blue-500">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Steps Today</h3>
+                        <span class="text-2xl">👟</span>
+                    </div>
+                    <div class="text-3xl font-bold text-blue-600 mb-2">8,247</div>
+                    <div class="text-sm text-gray-600">Goal: 10,000</div>
+                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: 82%"></div>
+                    </div>
+                </div>
+
+                <!-- Sleep Quality -->
+                <div class="bg-white rounded-3xl shadow-xl p-6 border-l-4 border-purple-500">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Sleep Score</h3>
+                        <span class="text-2xl">😴</span>
+                    </div>
+                    <div class="text-3xl font-bold text-purple-600 mb-2">85</div>
+                    <div class="text-sm text-gray-600">7h 32m last night</div>
+                    <div class="text-xs text-green-600 mt-2">↑ 12% vs last week</div>
+                </div>
+
+                <!-- Respiratory Rate -->
+                <div class="bg-white rounded-3xl shadow-xl p-6 border-l-4 border-green-500">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Breathing</h3>
+                        <span class="text-2xl">🫁</span>
+                    </div>
+                    <div class="text-3xl font-bold text-green-600 mb-2">16 RPM</div>
+                    <div class="text-sm text-gray-600">Normal range</div>
+                    <div class="text-xs text-yellow-600 mt-2">Monitor during high AQI</div>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-10 mb-10">
+                <!-- Advanced Health Chart -->
+                <div class="bg-white rounded-3xl shadow-xl p-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                            <span class="mr-3">📈</span>
+                            Health vs Air Quality
+                        </h2>
+                        <select onchange="updateHealthChart(this.value)"
+                            class="bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="steps">Steps</option>
+                            <option value="heartrate">Heart Rate</option>
+                            <option value="sleep">Sleep Quality</option>
+                            <option value="respiratory">Respiratory Rate</option>
+                        </select>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="healthChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- AI Health Insights -->
+                <div class="bg-white rounded-3xl shadow-xl p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="mr-3">🤖</span>
+                        AI Health Insights
+                    </h3>
+                    <div class="space-y-4">
+                        <div
+                            class="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-2xl border border-green-200">
+                            <div class="flex items-start">
+                                <span class="text-2xl mr-3">💚</span>
+                                <div>
+                                    <div class="font-bold text-gray-800 text-lg">Optimal Exercise Window</div>
+                                    <div class="text-gray-600 text-sm mt-1">Your heart rate variability is 23% better
+                                        during morning workouts when AQI is below 50. Consider scheduling runs between
+                                        6-8 AM.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-2xl border border-blue-200">
+                            <div class="flex items-start">
+                                <span class="text-2xl mr-3">🧠</span>
+                                <div>
+                                    <div class="font-bold text-gray-800 text-lg">Sleep Pattern Alert</div>
+                                    <div class="text-gray-600 text-sm mt-1">Your sleep quality drops 18% on days with
+                                        AQI above 75. Consider using an air purifier in your bedroom.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-2xl border border-yellow-200">
+                            <div class="flex items-start">
+                                <span class="text-2xl mr-3">⚠️</span>
+                                <div>
+                                    <div class="font-bold text-gray-800 text-lg">Respiratory Monitoring</div>
+                                    <div class="text-gray-600 text-sm mt-1">Your breathing rate increases by 12% when
+                                        AQI exceeds 100. We'll send alerts to help you adjust activities.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personalized Health Recommendations -->
+            <div class="bg-white rounded-3xl shadow-xl p-8 mb-10">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <span class="mr-3">🎯</span>
+                    Personalized Recommendations
+                </h2>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Today's Recommendations -->
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <span class="mr-2">📅</span>
+                            Today's Plan
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center p-4 bg-green-50 rounded-xl border border-green-200">
+                                <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center mr-4">
+                                    <span class="text-white text-xl">🏃‍♀️</span>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-gray-800">Morning Run (6:30 AM)</div>
+                                    <div class="text-sm text-gray-600">AQI: 35 - Perfect conditions for cardio</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+                                <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mr-4">
+                                    <span class="text-white text-xl">🧘‍♀️</span>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-gray-800">Outdoor Yoga (7:00 PM)</div>
+                                    <div class="text-sm text-gray-600">AQI: 42 - Great for breathing exercises</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                                <div class="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center mr-4">
+                                    <span class="text-white text-xl">🏠</span>
+                                </div>
+                                <div>
+                                    <div class="font-bold text-gray-800">Indoor Activities (2-4 PM)</div>
+                                    <div class="text-sm text-gray-600">AQI: 78 - Stay indoors during peak pollution
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Health Goals Progress -->
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                            <span class="mr-2">🎯</span>
+                            Weekly Goals
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="p-4 bg-gray-50 rounded-xl">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-medium text-gray-700">Clean Air Exercise</span>
+                                    <span class="text-sm font-bold text-green-600">4/5 days</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-600 h-2 rounded-full" style="width: 80%"></div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-gray-50 rounded-xl">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-medium text-gray-700">Outdoor Time (Good AQI)</span>
+                                    <span class="text-sm font-bold text-blue-600">18/20 hours</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 90%"></div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-gray-50 rounded-xl">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-medium text-gray-700">Sleep Quality Score</span>
+                                    <span class="text-sm font-bold text-purple-600">85/90</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-purple-600 h-2 rounded-full" style="width: 94%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Health Summary Cards -->
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-white rounded-3xl shadow-xl p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="mr-3">📊</span>
+                        Weekly Summary
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span class="text-gray-700 font-medium">Average AQI</span>
+                            <span class="font-bold text-green-600 text-lg">48 (Good)</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span class="text-gray-700 font-medium">Daily Steps</span>
+                            <span class="font-bold text-blue-600 text-lg">8,420</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span class="text-gray-700 font-medium">Outdoor Time</span>
+                            <span class="font-bold text-green-600 text-lg">3.2 hours</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                            <span class="text-gray-700 font-medium">Sleep Score</span>
+                            <span class="font-bold text-purple-600 text-lg">85/100</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Health Alerts -->
+                <div class="bg-white rounded-3xl shadow-xl p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="mr-3">🚨</span>
+                        Health Alerts
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-red-50 rounded-xl border border-red-200">
+                            <div class="flex items-center mb-2">
+                                <span class="text-red-600 text-lg mr-2">⚠️</span>
+                                <span class="font-bold text-red-800">High AQI Alert</span>
+                            </div>
+                            <div class="text-sm text-gray-600">AQI expected to reach 120 at 3 PM. Consider indoor
+                                workouts.</div>
+                        </div>
+
+                        <div class="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <div class="flex items-center mb-2">
+                                <span class="text-blue-600 text-lg mr-2">💧</span>
+                                <span class="font-bold text-blue-800">Hydration Reminder</span>
+                            </div>
+                            <div class="text-sm text-gray-600">Dry air detected. Increase water intake to 2.5L today.
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-green-50 rounded-xl border border-green-200">
+                            <div class="flex items-center mb-2">
+                                <span class="text-green-600 text-lg mr-2">✅</span>
+                                <span class="font-bold text-green-800">All Clear</span>
+                            </div>
+                            <div class="text-sm text-gray-600">Perfect conditions for evening outdoor activities!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export & Share -->
+                <div class="bg-white rounded-3xl shadow-xl p-8">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                        <span class="mr-3">📤</span>
+                        Export & Share
+                    </h3>
+                    <div class="space-y-4">
+                        <button onclick="exportHealthData()"
+                            class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-6 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium">
+                            📊 Export Health Report
+                        </button>
+
+                        <button onclick="shareWithDoctor()"
+                            class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium">
+                            👨‍⚕️ Share with Doctor
+                        </button>
+
+                        <button onclick="syncToCloud()"
+                            class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 px-6 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 font-medium">
+                            ☁️ Sync to Cloud
+                        </button>
+
+                        <div class="text-center text-sm text-gray-500 mt-4">
+                            Last backup: Today, 2:30 PM
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Community Forum Page -->
+    <div id="forum" class="page hidden">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl font-bold text-gray-800 mb-3">Community Forum</h1>
+                <p class="text-xl text-gray-600">Share tips and connect with others about air quality</p>
+            </div>
+
+            <!-- New Post Button -->
+            <div class="bg-white rounded-3xl shadow-xl p-6 mb-8">
+                <button
+                    class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-4 px-8 rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-semibold text-lg shadow-lg">
+                    💬 Start a New Discussion
+                </button>
+            </div>
+
+            <!-- Forum Posts -->
+            <div class="space-y-6">
+                <!-- Post 1 -->
+                <div class="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow duration-300">
+                    <div class="flex items-start space-x-4">
+                        <div
+                            class="w-14 h-14 bg-gradient-to-r from-blue-400 to-green-400 rounded-2xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                            SA
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3 mb-3">
+                                <h3 class="font-bold text-gray-800 text-lg">Sarah A.</h3>
+                                <span class="text-sm text-gray-500">2 hours ago</span>
+                                <span
+                                    class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium">Helpful
+                                    Tip</span>
+                            </div>
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">Found a great indoor play area for
+                                high-pollution days!</h4>
+                            <p class="text-gray-600 leading-relaxed mb-6">
+                                Just discovered this amazing indoor playground in Banjara Hills. Perfect for when the
+                                AQI is high and kids need to burn energy. They have excellent air filtration systems
+                                too! 🏃‍♀️
+                            </p>
+                            <div class="flex items-center space-x-6 text-sm text-gray-500">
+                                <button class="flex items-center space-x-2 hover:text-blue-600 transition-colors">
+                                    <span>👍</span>
+                                    <span class="font-medium">24 likes</span>
+                                </button>
+                                <button class="flex items-center space-x-2 hover:text-blue-600 transition-colors">
+                                    <span>💬</span>
+                                    <span class="font-medium">8 replies</span>
+                                </button>
+                                <button class="hover:text-blue-600 transition-colors font-medium">Share</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Post 2 -->
+                <div class="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition-shadow duration-300">
+                    <div class="flex items-start space-x-4">
+                        <div
+                            class="w-14 h-14 bg-gradient-to-r from-purple-400 to-pink-400 rounded-2xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                            MK
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3 mb-3">
+                                <h3 class="font-bold text-gray-800 text-lg">Mike K.</h3>
+                                <span class="text-sm text-gray-500">5 hours ago</span>
+                                <span
+                                    class="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full font-medium">Question</span>
+                            </div>
+                            <h4 class="text-xl font-bold text-gray-800 mb-3">Best air purifiers for home office?</h4>
+                            <p class="text-gray-600 leading-relaxed mb-6">
+                                Working from home and want to ensure my office has the cleanest air possible. Any
+                                recommendations for effective air purifiers that aren't too noisy during video calls? 🏠
+                            </p>
+                            <div class="flex items-center space-x-6 text-sm text-gray-500">
+                                <button class="flex items-center space-x-2 hover:text-blue-600 transition-colors">
+                                    <span>👍</span>
+                                    <span class="font-medium">12 likes</span>
+                                </button>
+                                <button class="flex items-center space-x-2 hover:text-blue-600 transition-colors">
+                                    <span>💬</span>
+                                    <span class="font-medium">15 replies</span>
+                                </button>
+                                <button class="hover:text-blue-600 transition-colors font-medium">Share</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Community Rewards Section -->
+                <div class="bg-gradient-to-r from-green-500 to-blue-500 rounded-xl shadow-lg p-8 text-white">
+                    <h2 class="text-2xl font-bold mb-2">Join the AirGuard Community & Earn Rewards!</h2>
+                    <p class="mb-6 opacity-90">Make a difference while earning Eco-Points for sustainable actions</p>
+
+                    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="challenge-card bg-white text-gray-800 rounded-lg p-4">
+                            <div class="text-3xl mb-2">🌱</div>
+                            <h3 class="font-semibold mb-2">Green Heroes: Plant 5 Trees!</h3>
+                            <p class="text-sm text-gray-600 mb-3">Plant 5 new trees and track their growth for 10 days.
+                            </p>
+                            <div class="text-green-600 font-semibold mb-3">Earn 500 Eco-Points!</div>
+                            <button
+                                class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition-colors">Join
+                                Challenge</button>
+                        </div>
+
+                        <div class="challenge-card bg-white text-gray-800 rounded-lg p-4">
+                            <div class="text-3xl mb-2">🚴‍♀️</div>
+                            <h3 class="font-semibold mb-2">Bike to Work Week</h3>
+                            <p class="text-sm text-gray-600 mb-3">Cycle to work for 5 days and reduce your carbon
+                                footprint.</p>
+                            <div class="text-green-600 font-semibold mb-3">Earn 300 Eco-Points!</div>
+                            <button
+                                class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition-colors">Join
+                                Challenge</button>
+                        </div>
+
+                        <div class="challenge-card bg-white text-gray-800 rounded-lg p-4">
+                            <div class="text-3xl mb-2">🏠</div>
+                            <h3 class="font-semibold mb-2">Energy Saver</h3>
+                            <p class="text-sm text-gray-600 mb-3">Reduce home energy consumption by 20% this month.</p>
+                            <div class="text-green-600 font-semibold mb-3">Earn 400 Eco-Points!</div>
+                            <button
+                                class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition-colors">Join
+                                Challenge</button>
+                        </div>
+
+                        <div class="challenge-card bg-white text-gray-800 rounded-lg p-4">
+                            <div class="text-3xl mb-2">📱</div>
+                            <h3 class="font-semibold mb-2">Air Quality Reporter</h3>
+                            <p class="text-sm text-gray-600 mb-3">Share 10 air quality updates with your community.</p>
+                            <div class="text-green-600 font-semibold mb-3">Earn 200 Eco-Points!</div>
+                            <button
+                                class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition-colors">Join
+                                Challenge</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                        <h3 class="font-semibold mb-3">My Progress</h3>
+                        <div class="flex justify-between items-center mb-2">
+                            <span>Current Eco-Points: <strong>1,250</strong></span>
+                            <span class="text-sm opacity-75">Level 3 EcoWarrior</span>
+                        </div>
+                        <div class="space-y-2">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Plant 5 Trees</span>
+                                    <span>3/5</span>
+                                </div>
+                                <div class="bg-white bg-opacity-30 rounded-full h-2">
+                                    <div class="progress-bar h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Bike to Work</span>
+                                    <span>2/5</span>
+                                </div>
+                                <div class="bg-white bg-opacity-30 rounded-full h-2">
+                                    <div class="progress-bar h-2 rounded-full" style="width: 40%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Alert Notification Popup -->
+    <div id="alertNotification"
+        class="fixed top-6 right-6 bg-white rounded-3xl shadow-2xl p-6 max-w-sm hidden notification-popup border-l-4 border-orange-500 z-50">
+        <div class="flex items-start space-x-4">
+            <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <span class="text-orange-600 text-2xl">⚠️</span>
+            </div>
+            <div class="flex-1">
+                <h3 class="font-bold text-gray-800 mb-2 text-lg">Heads up!</h3>
+                <p class="text-gray-600 mb-4 leading-relaxed">
+                    Air quality is expected to worsen in your area around 4 PM. Best to plan outdoor activities for the
+                    morning.
+                </p>
+                <div class="flex space-x-3">
+                    <button onclick="hideAlert()"
+                        class="bg-orange-500 text-white px-4 py-2 rounded-xl text-sm hover:bg-orange-600 transition-colors font-medium">
+                        Got it
+                    </button>
+                    <button onclick="hideAlert()"
+                        class="text-gray-500 px-4 py-2 text-sm hover:text-gray-700 transition-colors">
+                        Dismiss
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for map
+        let realTimeMap;
+        let streetLayer, satelliteLayer;
+        let aqiMarkers = [];
+
+        // Page Navigation System
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.add('hidden');
+            });
+
+            // Show selected page with animation
+            const targetPage = document.getElementById(pageId);
+            targetPage.classList.remove('hidden');
+            targetPage.classList.add('fade-in');
+
+            // Update navigation active state
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('nav-active');
+            });
+            event.target.classList.add('nav-active');
+
+            // Initialize charts and map when pages load
+            setTimeout(() => {
+                if (pageId === 'dashboard') {
+                    initHourlyChart();
+                    if (!realTimeMap) {
+                        initRealTimeMap();
+                    }
+                } else if (pageId === 'compare') {
+                    initCompareChart();
+                } else if (pageId === 'health') {
+                    initHealthChart();
+                }
+            }, 100);
+        }
+
+        // Alert Notification Functions
+        function showAlert() {
+            document.getElementById('alertNotification').classList.remove('hidden');
+
+            // Auto-hide after 10 seconds
+            setTimeout(() => {
+                hideAlert();
+            }, 10000);
+        }
+
+        function hideAlert() {
+            document.getElementById('alertNotification').classList.add('hidden');
+        }
+
+        // Chart Initialization Functions
+        function initHourlyChart() {
+            const ctx = document.getElementById('hourlyChart');
+            if (!ctx || ctx.chart) return;
+
+            // Generate 24-hour data
+            const hours = [];
+            const aqiData = [];
+            const currentHour = new Date().getHours();
+
+            for (let i = 0; i < 24; i++) {
+                const hour = (currentHour + i) % 24;
+                hours.push(hour.toString().padStart(2, '0') + ':00');
+                // Simulate realistic AQI variation
+                aqiData.push(Math.floor(Math.random() * 25) + 35 + Math.sin(i * 0.3) * 10);
+            }
+
+            ctx.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets: [{
+                        label: 'AQI Forecast',
+                        data: aqiData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxTicksLimit: 8,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initCompareChart() {
+            const ctx = document.getElementById('compareChart');
+            if (!ctx || ctx.chart) return;
+
+            ctx.chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Uppal', 'Nacharam', 'Ameerpet'],
+                    datasets: [{
+                        label: 'Current AQI',
+                        data: [42, 150, 78],
+                        backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                        borderRadius: 12,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 200,
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initHealthChart() {
+            const ctx = document.getElementById('healthChart');
+            if (!ctx || ctx.chart) return;
+
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const aqiData = [45, 52, 38, 41, 48, 35, 42];
+            const stepsData = [8200, 7800, 9200, 8900, 8100, 9800, 8400];
+
+            ctx.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: days,
+                    datasets: [{
+                        label: 'AQI',
+                        data: aqiData,
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        yAxisID: 'y',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 6
+                    }, {
+                        label: 'Daily Steps',
+                        data: stepsData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        yAxisID: 'y1',
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'AQI',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            max: 100,
+                            grid: {
+                                color: 'rgba(239, 68, 68, 0.1)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Steps',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            max: 12000
+                        }
+                    }
+                }
+            });
+        }
+
+        // Health Integration Functions
+        function updateHealthChart(metric) {
+            const ctx = document.getElementById('healthChart');
+            if (!ctx || !ctx.chart) return;
+
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const aqiData = [45, 52, 38, 41, 48, 35, 42];
+
+            let healthData, label, color, yAxisMax;
+
+            switch (metric) {
+                case 'steps':
+                    healthData = [8200, 7800, 9200, 8900, 8100, 9800, 8400];
+                    label = 'Daily Steps';
+                    color = '#3b82f6';
+                    yAxisMax = 12000;
+                    break;
+                case 'heartrate':
+                    healthData = [68, 72, 65, 70, 74, 66, 69];
+                    label = 'Heart Rate (BPM)';
+                    color = '#ef4444';
+                    yAxisMax = 100;
+                    break;
+                case 'sleep':
+                    healthData = [85, 78, 92, 88, 82, 90, 87];
+                    label = 'Sleep Quality Score';
+                    color = '#8b5cf6';
+                    yAxisMax = 100;
+                    break;
+                case 'respiratory':
+                    healthData = [16, 18, 15, 16, 19, 15, 16];
+                    label = 'Respiratory Rate (RPM)';
+                    color = '#10b981';
+                    yAxisMax = 25;
+                    break;
+            }
+
+            ctx.chart.data.datasets[1] = {
+                label: label,
+                data: healthData,
+                borderColor: color,
+                backgroundColor: color + '20',
+                yAxisID: 'y1',
+                tension: 0.4,
+                borderWidth: 3,
+                pointRadius: 6
+            };
+
+            ctx.chart.options.scales.y1.max = yAxisMax;
+            ctx.chart.options.scales.y1.title.text = label;
+            ctx.chart.update();
+        }
+
+        function connectDevice() {
+            // Simulate device connection
+            const devices = ['Garmin Watch', 'Samsung Health', 'Google Fit', 'Polar H10'];
+            const randomDevice = devices[Math.floor(Math.random() * devices.length)];
+
+            // Show success message
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-6 bg-green-500 text-white px-6 py-4 rounded-xl shadow-lg z-50';
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <span class="text-xl mr-3">✅</span>
+                    <div>
+                        <div class="font-bold">Device Connected!</div>
+                        <div class="text-sm opacity-90">${randomDevice} is now syncing</div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            // Auto-remove notification
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function exportHealthData() {
+            // Simulate data export
+            const data = {
+                period: 'Last 30 days',
+                averageAQI: 48,
+                totalSteps: 252600,
+                averageHeartRate: 70,
+                sleepScore: 85,
+                outdoorTime: '96 hours',
+                healthInsights: [
+                    'Exercise performance 23% better on good air quality days',
+                    'Sleep quality decreases 18% when AQI > 75',
+                    'Respiratory rate increases 12% during high pollution'
+                ]
+            };
+
+            // Create and download file
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'clAIRity-health-report.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            // Show success message
+            showNotification('📊 Health Report Exported', 'Your health data has been downloaded successfully!', 'green');
+        }
+
+        function shareWithDoctor() {
+            // Simulate sharing with healthcare provider
+            const shareData = {
+                patientId: 'USER_' + Math.random().toString(36).substr(2, 9),
+                reportDate: new Date().toISOString().split('T')[0],
+                summary: 'Air quality impact on health metrics - 30 day analysis'
+            };
+
+            // Show sharing options
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-3xl p-8 max-w-md mx-4">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Share with Healthcare Provider</h3>
+                    <div class="space-y-4 mb-6">
+                        <button class="w-full bg-blue-500 text-white py-3 px-6 rounded-xl hover:bg-blue-600 transition-colors">
+                            📧 Email to Doctor
+                        </button>
+                        <button class="w-full bg-green-500 text-white py-3 px-6 rounded-xl hover:bg-green-600 transition-colors">
+                            📱 Send via Health App
+                        </button>
+                        <button class="w-full bg-purple-500 text-white py-3 px-6 rounded-xl hover:bg-purple-600 transition-colors">
+                            🔗 Generate Share Link
+                        </button>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="w-full bg-gray-200 text-gray-700 py-2 px-6 rounded-xl hover:bg-gray-300 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        function syncToCloud() {
+            // Simulate cloud sync
+            showNotification('☁️ Syncing to Cloud', 'Uploading your health data...', 'blue');
+
+            setTimeout(() => {
+                showNotification('✅ Sync Complete', 'Your data is safely backed up to the cloud!', 'green');
+            }, 2000);
+        }
+
+        function showNotification(title, message, color) {
+            const notification = document.createElement('div');
+            const colorClasses = {
+                green: 'bg-green-500',
+                blue: 'bg-blue-500',
+                red: 'bg-red-500',
+                yellow: 'bg-yellow-500'
+            };
+
+            notification.className = `fixed top-20 right-6 ${colorClasses[color]} text-white px-6 py-4 rounded-xl shadow-lg z-50 max-w-sm`;
+            notification.innerHTML = `
+                <div>
+                    <div class="font-bold">${title}</div>
+                    <div class="text-sm opacity-90">${message}</div>
+                </div>
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Simulate real-time health data updates
+        function updateHealthMetrics() {
+            // Update heart rate
+            const heartRateElement = document.querySelector('[class*="text-red-600"]:not([class*="border"])');
+            if (heartRateElement && heartRateElement.textContent.includes('BPM')) {
+                const currentRate = parseInt(heartRateElement.textContent);
+                const newRate = currentRate + (Math.random() - 0.5) * 4;
+                heartRateElement.textContent = Math.round(Math.max(60, Math.min(85, newRate))) + ' BPM';
+            }
+
+            // Update steps
+            const stepsElement = document.querySelector('[class*="text-blue-600"]:not([class*="border"])');
+            if (stepsElement && stepsElement.textContent.includes(',')) {
+                const currentSteps = parseInt(stepsElement.textContent.replace(',', ''));
+                const newSteps = currentSteps + Math.floor(Math.random() * 50);
+                stepsElement.textContent = newSteps.toLocaleString();
+
+                // Update progress bar
+                const progressBar = stepsElement.parentElement.querySelector('.bg-blue-600');
+                if (progressBar) {
+                    const percentage = Math.min(100, (newSteps / 10000) * 100);
+                    progressBar.style.width = percentage + '%';
+                }
+            }
+        }
+
+        // Update health metrics every 30 seconds
+        setInterval(updateHealthMetrics, 30000);
+
+        // Real-Time Map Functions
+        function initRealTimeMap() {
+            // Initialize map centered on Hyderabad
+            realTimeMap = L.map('realTimeMap').setView([17.3850, 78.4867], 11);
+
+            // Define map layers
+            streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            });
+
+            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri'
+            });
+
+            // Add default street layer
+            streetLayer.addTo(realTimeMap);
+
+            // Add AQI monitoring stations
+            addAQIStations();
+
+            // Update data every 30 seconds (simulated)
+            setInterval(updateAQIData, 30000);
+        }
+
+        function addAQIStations() {
+            const stations = [
+                { name: 'Banjara Hills', lat: 17.4126, lng: 78.4482, aqi: 38 },
+                { name: 'Secunderabad', lat: 17.4399, lng: 78.4983, aqi: 68 },
+                { name: 'Jubilee Hills', lat: 17.4239, lng: 78.4738, aqi: 41 },
+                { name: 'Old City', lat: 17.3616, lng: 78.4747, aqi: 89 },
+                { name: 'Gachibowli', lat: 17.4435, lng: 78.3479, aqi: 35 },
+                { name: 'Hitech City', lat: 17.4475, lng: 78.3563, aqi: 42 },
+                { name: 'Kondapur', lat: 17.4647, lng: 78.3671, aqi: 45 },
+                { name: 'Madhapur', lat: 17.4483, lng: 78.3915, aqi: 52 }
+            ];
+
+            stations.forEach(station => {
+                const color = getAQIColor(station.aqi);
+                const marker = L.circleMarker([station.lat, station.lng], {
+                    radius: 12,
+                    fillColor: color,
+                    color: '#ffffff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(realTimeMap);
+
+                // Custom popup content
+                const popupContent = `
+                    <div class="text-center p-2">
+                        <h3 class="font-bold text-lg text-gray-800">${station.name}</h3>
+                        <div class="text-2xl font-bold" style="color: ${color}">${station.aqi}</div>
+                        <div class="text-sm text-gray-600">${getAQICategory(station.aqi)}</div>
+                        <div class="text-xs text-gray-500 mt-1">Updated: ${new Date().toLocaleTimeString()}</div>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent);
+                aqiMarkers.push({ marker, station });
+            });
+        }
+
+        function getAQIColor(aqi) {
+            if (aqi <= 50) return '#10b981'; // Green
+            if (aqi <= 100) return '#f59e0b'; // Yellow
+            if (aqi <= 150) return '#f97316'; // Orange
+            if (aqi <= 200) return '#ef4444'; // Red
+            return '#8b5cf6'; // Purple
+        }
+
+        function getAQICategory(aqi) {
+            if (aqi <= 50) return 'Good';
+            if (aqi <= 100) return 'Moderate';
+            if (aqi <= 150) return 'Unhealthy for Sensitive Groups';
+            if (aqi <= 200) return 'Unhealthy';
+            return 'Very Unhealthy';
+        }
+
+        function updateAQIData() {
+            // Simulate real-time data updates
+            aqiMarkers.forEach(({ marker, station }) => {
+                // Add small random variation to simulate real-time changes
+                const variation = (Math.random() - 0.5) * 6;
+                station.aqi = Math.max(20, Math.min(150, station.aqi + variation));
+
+                const color = getAQIColor(station.aqi);
+                marker.setStyle({ fillColor: color });
+
+                // Update popup content
+                const popupContent = `
+                    <div class="text-center p-2">
+                        <h3 class="font-bold text-lg text-gray-800">${station.name}</h3>
+                        <div class="text-2xl font-bold" style="color: ${color}">${Math.round(station.aqi)}</div>
+                        <div class="text-sm text-gray-600">${getAQICategory(station.aqi)}</div>
+                        <div class="text-xs text-gray-500 mt-1">Updated: ${new Date().toLocaleTimeString()}</div>
+                    </div>
+                `;
+                marker.setPopupContent(popupContent);
+            });
+        }
+
+        function toggleMapLayer(layerType) {
+            // Update button styles
+            document.querySelectorAll('[onclick*="toggleMapLayer"]').forEach(btn => {
+                btn.classList.remove('bg-blue-100', 'text-blue-700');
+                btn.classList.add('bg-gray-100', 'hover:bg-gray-200');
+            });
+
+            if (layerType === 'satellite') {
+                realTimeMap.removeLayer(streetLayer);
+                realTimeMap.addLayer(satelliteLayer);
+                event.target.classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                event.target.classList.add('bg-blue-100', 'text-blue-700');
+            } else {
+                realTimeMap.removeLayer(satelliteLayer);
+                realTimeMap.addLayer(streetLayer);
+                event.target.classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                event.target.classList.add('bg-blue-100', 'text-blue-700');
+            }
+        }
+
+        // Initialize dashboard on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(() => {
+                initHourlyChart();
+                initRealTimeMap();
+            }, 200);
+        });
+    </script>
+    <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'97ce74b084b39a8f',t:'MTc1NzUwMjM4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+</body>
+
+</html>
